@@ -1,0 +1,24 @@
+{
+  "name": "restaurant-ordering",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Real-time restaurant ordering prototype: Angular client + Node.js server",
+  "workspaces": [
+    "server"
+  ],
+  "scripts": {
+    "start": "npm run start -w server",
+    "start:demo": "npm run start:demo -w server",
+    "start:chaos": "npm run start:chaos -w server",
+    "build": "npm run build -w server",
+    "test": "npm run test -w server",
+    "lint": "npm run lint -w server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.2",
+    "typescript": "~6.0.3"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
