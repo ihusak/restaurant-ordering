@@ -4,14 +4,15 @@
   "private": true,
   "description": "Real-time restaurant ordering prototype: Angular client + Node.js server",
   "workspaces": [
-    "server"
+    "server",
+    "client"
   ],
   "scripts": {
-    "start": "npm run start -w server",
-    "start:demo": "npm run start:demo -w server",
-    "start:chaos": "npm run start:chaos -w server",
-    "build": "npm run build -w server",
-    "test": "npm run test -w server",
+    "start": "concurrently -k -n server,client -c blue,magenta \"npm run start -w server\" \"npm run start -w client\"",
+    "start:demo": "concurrently -k -n server,client -c blue,magenta \"npm run start:demo -w server\" \"npm run start -w client\"",
+    "start:chaos": "concurrently -k -n server,client -c blue,magenta \"npm run start:chaos -w server\" \"npm run start -w client\"",
+    "build": "npm run build -w server && npm run build -w client",
+    "test": "npm run test -w server && npm run test -w client",
     "lint": "npm run lint -w server"
   },
   "devDependencies": {
