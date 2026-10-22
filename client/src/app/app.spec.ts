@@ -2,14 +2,21 @@ import { TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
 import { TitleStrategy, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { provideMockStore } from '@ngrx/store/testing';
 import { App } from './app';
 import { routes } from './app.routes';
 import { PageTitleStrategy } from './core/page-title.strategy';
+import { initialMenuState } from './state/menu/menu.reducer';
+import { initialOrdersState } from './state/orders/orders.reducer';
 
 describe('App shell', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideRouter(routes), { provide: TitleStrategy, useClass: PageTitleStrategy }],
+      providers: [
+        provideRouter(routes),
+        { provide: TitleStrategy, useClass: PageTitleStrategy },
+        provideMockStore({ initialState: { menu: initialMenuState, orders: initialOrdersState } }),
+      ],
     });
   });
 
