@@ -1,2 +1,27 @@
-<h1>Restaurant ordering</h1>
-<router-outlet />
+<mat-toolbar class="header">
+  <a class="brand" routerLink="/menu">
+    <mat-icon aria-hidden="true">storefront</mat-icon>
+    <span>{{ appName }}</span>
+  </a>
+
+  <nav class="nav" aria-label="Main">
+    @for (link of links; track link.path) {
+      <a
+        mat-button
+        [routerLink]="link.path"
+        routerLinkActive="active"
+        ariaCurrentWhenActive="page"
+      >
+        <mat-icon aria-hidden="true">{{ link.icon }}</mat-icon>
+        {{ link.label }}
+      </a>
+    }
+  </nav>
+
+  <span class="spacer"></span>
+  <!-- The connection indicator goes here (step 4). -->
+</mat-toolbar>
+
+<main class="content">
+  <router-outlet />
+</main>

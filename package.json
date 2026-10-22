@@ -13,7 +13,7 @@
     "start:chaos": "concurrently -k -n server,client -c blue,magenta \"npm run start:chaos -w server\" \"npm run start -w client\"",
     "build": "npm run build -w server && npm run build -w client",
     "test": "npm run test -w server && npm run test -w client",
-    "lint": "npm run lint -w server"
+    "lint": "npm run lint -w server && npm run lint -w client"
   },
   "devDependencies": {
     "concurrently": "^9.2.2",
