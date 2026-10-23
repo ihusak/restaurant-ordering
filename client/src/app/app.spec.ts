@@ -8,6 +8,7 @@ import { routes } from './app.routes';
 import { PageTitleStrategy } from './core/page-title.strategy';
 import { initialMenuState } from './state/menu/menu.reducer';
 import { initialOrdersState } from './state/orders/orders.reducer';
+import { initialConnectionState } from './state/realtime/connection.reducer';
 
 describe('App shell', () => {
   beforeEach(() => {
@@ -15,7 +16,7 @@ describe('App shell', () => {
       providers: [
         provideRouter(routes),
         { provide: TitleStrategy, useClass: PageTitleStrategy },
-        provideMockStore({ initialState: { menu: initialMenuState, orders: initialOrdersState } }),
+        provideMockStore({ initialState: { menu: initialMenuState, orders: initialOrdersState, connection: initialConnectionState } }),
       ],
     });
   });

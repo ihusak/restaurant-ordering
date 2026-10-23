@@ -3,6 +3,7 @@ import type { EntityState } from '@ngrx/entity';
 import { createFeature, createReducer, createSelector, on } from '@ngrx/store';
 import type { Order } from '@shared';
 import type { LoadStatus } from '../load-status';
+import { RealtimeActions } from '../realtime/realtime.actions';
 import { OrdersActions } from './orders.actions';
 
 export interface OrdersState extends EntityState<Order> {
@@ -41,6 +42,10 @@ export const ordersFeature = createFeature({
         }),
     ),
     on(OrdersActions.loadFailed, (state, { error }): OrdersState => ({ ...state, status: 'error', error })),
+    on(RealtimeActions.eventReceived, (state, { event }): OrdersState => {
+      if (event.type !== 'order.upserted' || state.epoch === null || event.version <= state.version) return state;
+      return orderAdapter.upsertOne(event.order, { ...state, version: event.version });
+    }),
   ),
   extraSelectors: ({ selectOrdersState }) => {
     const selectAllOrders = createSelector(selectOrdersState, selectAll);

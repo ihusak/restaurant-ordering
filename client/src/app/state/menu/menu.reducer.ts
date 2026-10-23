@@ -1,14 +1,16 @@
 import { createEntityAdapter } from '@ngrx/entity';
 import type { EntityState } from '@ngrx/entity';
 import { createFeature, createReducer, createSelector, on } from '@ngrx/store';
-import type { Category, MenuItem } from '@shared';
+import type { Category, MenuItem, ServerEvent } from '@shared';
 import type { LoadStatus } from '../load-status';
+import { RealtimeActions } from '../realtime/realtime.actions';
 import { MenuActions } from './menu.actions';
 
 export interface MenuState {
   categories: EntityState<Category>;
   items: EntityState<MenuItem>;
   epoch: string | null;
+  /** Version of the snapshot or of the last applied event: anything older is already included. */
   version: number;
   status: LoadStatus;
   error: string | null;
@@ -28,6 +30,21 @@ export const initialMenuState: MenuState = {
   status: 'idle',
   error: null,
 };
+
+function applyMenuEvent(state: MenuState, event: ServerEvent): MenuState {
+  switch (event.type) {
+    case 'category.upserted':
+      return { ...state, categories: categoryAdapter.upsertOne(event.category, state.categories) };
+    case 'category.deleted':
+      return { ...state, categories: categoryAdapter.removeOne(event.id, state.categories) };
+    case 'item.upserted':
+      return { ...state, items: itemAdapter.upsertOne(event.item, state.items) };
+    case 'item.deleted':
+      return { ...state, items: itemAdapter.removeOne(event.id, state.items) };
+    default:
+      return state;
+  }
+}
 
 const categorySelectors = categoryAdapter.getSelectors();
 const itemSelectors = itemAdapter.getSelectors();
@@ -50,6 +67,11 @@ export const menuFeature = createFeature({
     ),
     // Data loaded earlier is kept: a failed reload should not empty the screen.
     on(MenuActions.loadFailed, (state, { error }): MenuState => ({ ...state, status: 'error', error })),
+    on(RealtimeActions.eventReceived, (state, { event }): MenuState => {
+      if (state.epoch === null || event.version <= state.version) return state;
+      const next = applyMenuEvent(state, event);
+      return next === state ? state : { ...next, version: event.version };
+    }),
   ),
   extraSelectors: ({ selectCategories, selectItems }) => {
     const selectAllCategories = createSelector(selectCategories, categorySelectors.selectAll);
