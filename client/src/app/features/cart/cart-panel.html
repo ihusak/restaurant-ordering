@@ -25,12 +25,19 @@
 } @else {
   <ul class="lines" aria-labelledby="cart-title">
     @for (line of lines(); track line.lineId) {
-      <li class="line">
+      @let issue = issueOf(line);
+      <li class="line" [class.changed]="issue">
         <div class="line-info">
           <span class="line-name">{{ line.name }}</span>
           <span class="line-unit">
             {{ money(line.unitPrice) }}{{ line.openPrice ? ' · custom price' : '' }}
           </span>
+          @if (issue) {
+            <span class="line-issue">
+              <mat-icon aria-hidden="true">warning</mat-icon>
+              {{ describe(issue) }}
+            </span>
+          }
         </div>
         <div class="stepper" role="group" [attr.aria-label]="'Quantity of ' + line.name">
           <button
@@ -94,21 +101,18 @@
     </div>
   </dl>
 
-  @switch (checkout().status) {
-    @case ('menu-changed') {
-      <div class="problem" role="alert">
-        <p class="problem-title">The menu changed since you added these items:</p>
-        <ul>
-          @for (issue of checkout().issues; track issue.itemId) {
-            <li>{{ describe(issue) }}</li>
-          }
-        </ul>
-        <p>Update your cart and place the order again.</p>
-      </div>
-    }
-    @case ('failed') {
-      <p class="problem" role="alert">{{ checkout().error }}</p>
-    }
+  @if (review().length > 0) {
+    <div class="review" role="alert">
+      <p class="review-title">
+        {{ review().length === 1 ? 'An item' : review().length + ' items' }} changed since you added
+        {{ review().length === 1 ? 'it' : 'them' }}. Check the cart before placing the order.
+      </p>
+      <button mat-flat-button type="button" (click)="acceptChanges()" [disabled]="submitting()">Accept changes</button>
+    </div>
+  }
+
+  @if (checkout().status === 'failed') {
+    <p class="problem" role="alert">{{ checkout().error }}</p>
   }
 
   @if (blocker(); as reason) {

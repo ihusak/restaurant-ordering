@@ -74,6 +74,17 @@ export const cartFeature = createFeature({
       edited(state, { discount: Math.max(0, Math.round(discount)) }),
     ),
     on(CartActions.cleared, (state): CartState => edited(state, { lines: [], discount: 0 })),
+    on(CartActions.changesAccepted, (state, { issues }): CartState => {
+      const byLine = new Map(issues.map(({ lineId, issue }) => [lineId, issue]));
+      const lines: CartLine[] = [];
+      for (const line of state.lines) {
+        const issue = byLine.get(line.lineId);
+        if (!issue) lines.push(line);
+        else if (issue.kind === 'price_changed') lines.push({ ...line, unitPrice: issue.actual });
+        // Removed, unavailable, or the pricing kind changed: the line cannot be kept as it is.
+      }
+      return edited(state, { lines });
+    }),
     on(CheckoutActions.submitted, (state, { newKey }): CartState => ({ ...state, idempotencyKey: state.idempotencyKey ?? newKey })),
     on(CheckoutActions.succeeded, (): CartState => initialCartState),
     on(CheckoutActions.menuChanged, (state): CartState => ({ ...state, outcomeUnknown: false })),

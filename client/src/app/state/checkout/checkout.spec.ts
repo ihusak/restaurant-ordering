@@ -15,6 +15,7 @@ import { OrdersActions } from '../orders/orders.actions';
 import { initialOrdersState, ordersFeature } from '../orders/orders.reducer';
 import { RealtimeActions } from '../realtime/realtime.actions';
 import { CheckoutActions } from './checkout.actions';
+import { selectCartReview } from './cart-review';
 import { placeOrder } from './checkout.effects';
 
 const request: CreateOrderRequest = {
@@ -37,7 +38,12 @@ describe('placeOrder effect', () => {
     TestBed.configureTestingModule({
       providers: [
         provideMockActions(() => actions$),
-        provideMockStore({ selectors: [{ selector: cartFeature.selectOrderRequest, value: request }] }),
+        provideMockStore({
+          selectors: [
+            { selector: cartFeature.selectOrderRequest, value: request },
+            { selector: selectCartReview, value: [] },
+          ],
+        }),
         { provide: ApiService, useValue: { placeOrder: placeOrderApi } },
       ],
     });

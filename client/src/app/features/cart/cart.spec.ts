@@ -4,11 +4,13 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { provideRouter } from '@angular/router';
 import { ActionsSubject, Store, provideState, provideStore } from '@ngrx/store';
 import type { Action } from '@ngrx/store';
-import { menuItem, order } from '../../../testing/fixtures';
+import { menuItem, menuSnapshot, order } from '../../../testing/fixtures';
 import { CartActions } from '../../state/cart/cart.actions';
 import { cartFeature } from '../../state/cart/cart.reducer';
 import { CheckoutActions } from '../../state/checkout/checkout.actions';
 import { checkoutFeature } from '../../state/checkout/checkout.reducer';
+import { MenuActions } from '../../state/menu/menu.actions';
+import { menuFeature } from '../../state/menu/menu.reducer';
 import { connectionFeature } from '../../state/realtime/connection.reducer';
 import { RealtimeActions } from '../../state/realtime/realtime.actions';
 import { CartPanel } from './cart-panel';
@@ -73,6 +75,7 @@ describe('CartPanel', () => {
         provideRouter([]),
         provideStore(),
         provideState(cartFeature),
+        provideState(menuFeature),
         provideState(checkoutFeature),
         provideState(connectionFeature),
       ],
@@ -141,11 +144,32 @@ describe('CartPanel', () => {
     expect(placeButton()).toBeNull();
   });
 
-  it('explains which items changed when the server refuses the order', async () => {
-    store.dispatch(
-      CheckoutActions.menuChanged({ issues: [{ itemId: 'pizza', kind: 'price_changed', expected: 1250, actual: 1400 }] }),
-    );
-    await fixture.whenStable();
-    expect(textOf(fixture)).toContain('Pizza now costs $14.00 instead of $12.50.');
+  describe('when the menu changes', () => {
+    const pizza = menuItem({ id: 'pizza', name: 'Pizza', price: 1250, rev: 1 });
+    const loadMenu = async (price: number): Promise<void> => {
+      store.dispatch(MenuActions.loadSucceeded({ snapshot: menuSnapshot({ items: [{ ...pizza, price }] }) }));
+      await fixture.whenStable();
+    };
+
+    it('warns on the line and blocks the order until the change is accepted', async () => {
+      await loadMenu(1400);
+      expect(element().querySelector('.line-issue')?.textContent).toContain('Now $14.00 instead of $12.50.');
+      expect(placeButton()?.disabled).toBe(true);
+
+      [...element().querySelectorAll('button')].find((button) => button.textContent.includes('Accept changes'))?.click();
+      await fixture.whenStable();
+      expect(element().querySelector('.line-issue')).toBeNull();
+      expect(placeButton()?.disabled).toBe(false);
+      expect(placeButton()?.textContent).toContain('$14.00');
+    });
+
+    it('shows changes the server reported before the live menu has them', async () => {
+      await loadMenu(1250);
+      store.dispatch(
+        CheckoutActions.menuChanged({ issues: [{ itemId: 'pizza', kind: 'price_changed', expected: 1250, actual: 1300 }] }),
+      );
+      await fixture.whenStable();
+      expect(element().querySelector('.line-issue')?.textContent).toContain('Now $13.00');
+    });
   });
 });

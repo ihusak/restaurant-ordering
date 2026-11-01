@@ -24,5 +24,16 @@ export const checkoutFeature = createFeature({
     on(CheckoutActions.confirmationDismissed, (state): CheckoutState => ({ ...state, placed: null })),
     // A new item in the cart starts a new order: the old confirmation is no longer relevant.
     on(CartActions.itemAdded, (state): CheckoutState => (state.placed ? { ...state, placed: null } : state)),
+    // Once the cart is edited, the answer to the previous attempt no longer describes it.
+    on(
+      CartActions.itemAdded,
+      CartActions.quantityChanged,
+      CartActions.lineRemoved,
+      CartActions.discountChanged,
+      CartActions.cleared,
+      CartActions.changesAccepted,
+      (state): CheckoutState =>
+        state.status === 'submitting' || state.status === 'idle' ? state : { ...state, status: 'idle', error: null, issues: [] },
+    ),
   ),
 });

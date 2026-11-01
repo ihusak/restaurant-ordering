@@ -4,10 +4,11 @@ import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import type { Action } from '@ngrx/store';
-import { EMPTY, catchError, exhaustMap, map, of, retry, throwError, timer } from 'rxjs';
+import { catchError, exhaustMap, map, of, retry, throwError, timer } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { errorMessage, isApiErrorBody, isTransient } from '../../core/http-error';
 import { cartFeature } from '../cart/cart.reducer';
+import { selectCartReview } from './cart-review';
 import { CheckoutActions } from './checkout.actions';
 
 const CHECKOUT_RETRIES = 2;
@@ -38,10 +39,15 @@ export const placeOrder = createEffect(
     actions$.pipe(
       ofType(CheckoutActions.submitted),
       // The reducer has already put the key into the cart, so the request carries it.
-      concatLatestFrom(() => store.select(cartFeature.selectOrderRequest)),
+      concatLatestFrom(() => [store.select(cartFeature.selectOrderRequest), store.select(selectCartReview)]),
       // While an order is on its way, more clicks are ignored rather than queued.
-      exhaustMap(([, request]) => {
-        if (!request || request.lines.length === 0) return EMPTY;
+      exhaustMap(([, request, review]) => {
+        // Every submit must end with a result action, or the screen would wait forever.
+        if (!request || request.lines.length === 0) {
+          return of(CheckoutActions.failed({ failure: 'rejected', error: 'The cart is empty.' }));
+        }
+        // The user has to see and accept menu changes before the order goes out.
+        if (review.length > 0) return of(CheckoutActions.menuChanged({ issues: review.map(({ issue }) => issue) }));
         return api.placeOrder(request).pipe(
           // Safe to repeat: the same key gives back the same order.
           retry({

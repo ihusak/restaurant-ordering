@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { MAX_OPEN_PRICE, ORDER_STATUSES, computeTotals, isValidCents } from '@shared';
+import { MAX_OPEN_PRICE, ORDER_STATUSES, computeTotals, findMenuIssue, isValidCents } from '@shared';
 import type { CreateOrderRequest, MenuIssue, Order, OrderLine, OrderStatus, OrdersSnapshot } from '@shared';
 import { ApiError, notFound } from './errors';
 import type { EventLog } from './event-log';
@@ -43,17 +43,12 @@ export class OrderStore {
     const lines: OrderLine[] = [];
     for (const line of request.lines) {
       const item = this.menu.findItem(line.itemId);
-      if (!item) {
-        issues.push({ itemId: line.itemId, kind: 'removed' });
-      } else if (!item.available) {
-        issues.push({ itemId: item.id, kind: 'unavailable' });
-      } else if (item.openPrice !== line.openPrice) {
-        issues.push({ itemId: item.id, kind: 'pricing_changed', openPrice: item.openPrice });
-      } else if (!item.openPrice && item.price !== line.unitPrice) {
-        issues.push({ itemId: item.id, kind: 'price_changed', expected: line.unitPrice, actual: item.price ?? 0 });
-      } else if (item.openPrice && !isValidCents(line.unitPrice, MAX_OPEN_PRICE)) {
+      const issue = findMenuIssue(item, line);
+      if (issue) {
+        issues.push(issue);
+      } else if (item?.openPrice && !isValidCents(line.unitPrice, MAX_OPEN_PRICE)) {
         throw new ApiError(400, 'VALIDATION', `Invalid price for "${item.name}"`);
-      } else {
+      } else if (item) {
         lines.push({
           itemId: item.id,
           name: item.name,
