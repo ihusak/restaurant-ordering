@@ -32,6 +32,20 @@
   color: var(--mat-sys-on-secondary-container);
 }
 
+.count {
+  display: inline-block;
+  min-width: 20px;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 10px;
+  box-sizing: border-box;
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  font: var(--mat-sys-label-small);
+  line-height: 20px;
+  text-align: center;
+}
+
 .spacer {
   flex: 1;
 }

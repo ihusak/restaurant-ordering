@@ -1,10 +1,12 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatToolbarModule } from '@angular/material/toolbar';
+import { Store } from '@ngrx/store';
 import { ConnectionIndicator } from './core/connection-indicator';
 import { APP_NAME } from './core/page-title.strategy';
+import { ordersFeature } from './state/orders/orders.reducer';
 
 interface NavLink {
   path: string;
@@ -29,6 +31,8 @@ interface NavLink {
 })
 export class App {
   protected readonly appName = APP_NAME;
+  /** Visible from every page, so a new or finished order is noticed right away. */
+  protected readonly activeOrders = inject(Store).selectSignal(ordersFeature.selectActiveCount);
   protected readonly links: readonly NavLink[] = [
     { path: '/menu', label: 'Menu', icon: 'restaurant_menu' },
     { path: '/setup', label: 'Setup', icon: 'tune' },

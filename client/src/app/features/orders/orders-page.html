@@ -1,0 +1,80 @@
+<header class="page-header">
+  <h1>Orders</h1>
+  <nav class="filters" aria-label="Which orders">
+    <a class="chip" routerLink="." [queryParams]="{ show: null }" [class.selected]="!showAll()" [attr.aria-current]="!showAll() ? 'true' : null">
+      Active · {{ activeCount() }}
+    </a>
+    <a class="chip" routerLink="." [queryParams]="{ show: 'all' }" [class.selected]="showAll()" [attr.aria-current]="showAll() ? 'true' : null">
+      All · {{ totalCount() }}
+    </a>
+  </nav>
+</header>
+
+@if (totalCount() === 0 && status() !== 'loaded') {
+  @if (status() === 'error') {
+    <div class="message" role="alert">
+      <p>{{ error() }}</p>
+      <button mat-stroked-button type="button" (click)="reload()">Try again</button>
+    </div>
+  } @else {
+    <ul class="orders" aria-busy="true" aria-label="Loading orders">
+      @for (card of skeletonCards; track card) {
+        <li class="order skeleton" aria-hidden="true"></li>
+      }
+    </ul>
+  }
+} @else if (orders().length === 0) {
+  <div class="message">
+    <p>{{ showAll() ? 'No orders yet.' : 'No orders in progress.' }}</p>
+    <a mat-stroked-button routerLink="/menu">Go to the menu</a>
+  </div>
+} @else {
+  <ul class="orders">
+    @for (order of orders(); track order.id) {
+      @let step = stepIndex(order);
+      <li class="order" [class.done]="order.status === 'completed'" [attr.data-status]="order.status">
+        <div class="order-header">
+          <h2>Order #{{ order.number }}</h2>
+          <span class="order-time">{{ time(order) }}</span>
+          <span class="order-total">{{ money(order.total) }}</span>
+        </div>
+
+        <div class="status">
+          <span class="status-label">
+            @if (order.status === 'ready') {
+              <mat-icon aria-hidden="true">notifications_active</mat-icon>
+            }
+            {{ labels[order.status] }}
+          </span>
+          <ol class="steps" [attr.aria-label]="'Step ' + (step + 1) + ' of ' + steps.length">
+            @for (name of steps; track name; let index = $index) {
+              <li class="step" [class.reached]="index <= step" [attr.aria-current]="index === step ? 'step' : null">
+                <span class="cdk-visually-hidden">{{ labels[name] }}</span>
+              </li>
+            }
+          </ol>
+        </div>
+
+        <details class="details">
+          <summary>
+            {{ order.lines.length }} {{ order.lines.length === 1 ? 'item' : 'items' }}
+          </summary>
+          <ul class="lines">
+            @for (line of order.lines; track $index) {
+              <li>
+                <span class="line-name">{{ line.quantity }} × {{ line.name }}</span>
+                <span>{{ money(line.lineTotal) }}</span>
+              </li>
+            }
+            @if (order.discount > 0) {
+              <li class="discount">
+                <span>Discount</span>
+                <span>−{{ money(order.discount) }}</span>
+              </li>
+            }
+          </ul>
+        </details>
+      </li>
+    }
+  </ul>
+}

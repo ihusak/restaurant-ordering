@@ -3,7 +3,7 @@ import { Title } from '@angular/platform-browser';
 import { TitleStrategy, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { provideMockActions } from '@ngrx/effects/testing';
-import { provideMockStore } from '@ngrx/store/testing';
+import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { EMPTY } from 'rxjs';
 import { App } from './app';
 import { routes } from './app.routes';
@@ -11,7 +11,7 @@ import { PageTitleStrategy } from './core/page-title.strategy';
 import { initialCartState } from './state/cart/cart.reducer';
 import { initialCheckoutState } from './state/checkout/checkout.reducer';
 import { initialMenuState } from './state/menu/menu.reducer';
-import { initialOrdersState } from './state/orders/orders.reducer';
+import { initialOrdersState, ordersFeature } from './state/orders/orders.reducer';
 import { initialConnectionState } from './state/realtime/connection.reducer';
 
 describe('App shell', () => {
@@ -67,5 +67,19 @@ describe('App shell', () => {
     await fixture.whenStable();
     const active = (fixture.nativeElement as HTMLElement).querySelector('nav a[aria-current="page"]');
     expect(active?.textContent).toContain('Setup');
+  });
+
+  it('counts the orders in progress next to Orders', async () => {
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const ordersLink = (): HTMLElement | null => (fixture.nativeElement as HTMLElement).querySelector('nav a[href="/orders"]');
+    expect(ordersLink()?.querySelector('.count')).toBeNull();
+
+    const store = TestBed.inject(MockStore) as MockStore;
+    store.overrideSelector(ordersFeature.selectActiveCount, 2);
+    store.refreshState();
+    await fixture.whenStable();
+    expect(ordersLink()?.querySelector('.count')?.textContent).toBe('2 in progress');
+    store.resetSelectors();
   });
 });

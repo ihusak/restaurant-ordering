@@ -58,10 +58,11 @@ export const ordersFeature = createFeature({
   ),
   extraSelectors: ({ selectOrdersState }) => {
     const selectAllOrders = createSelector(selectOrdersState, selectAll);
-    const selectActiveCount = createSelector(
-      selectAllOrders,
-      (orders) => orders.filter((order) => order.status !== 'completed').length,
+    /** Orders the kitchen is still working on, or that wait to be picked up. */
+    const selectActiveOrders = createSelector(selectAllOrders, (orders) =>
+      orders.filter((order) => order.status !== 'completed'),
     );
-    return { selectAllOrders, selectActiveCount };
+    const selectActiveCount = createSelector(selectActiveOrders, (orders) => orders.length);
+    return { selectAllOrders, selectActiveOrders, selectActiveCount };
   },
 });
