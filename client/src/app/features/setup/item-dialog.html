@@ -1,0 +1,56 @@
+<h2 mat-dialog-title>{{ data.item ? 'Edit item' : 'New item' }}</h2>
+<form [formGroup]="form" (ngSubmit)="save()">
+  <mat-dialog-content class="fields">
+    <mat-form-field>
+      <mat-label>Name</mat-label>
+      <input matInput formControlName="name" maxlength="120" cdkFocusInitial />
+      @if (form.controls.name.hasError('required')) {
+        <mat-error>Enter a name</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field>
+      <mat-label>Category</mat-label>
+      <mat-select formControlName="categoryId">
+        @for (category of data.categories; track category.id) {
+          <mat-option [value]="category.id">{{ category.name }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field>
+      <mat-label>Description</mat-label>
+      <textarea matInput formControlName="description" maxlength="500" rows="2"></textarea>
+    </mat-form-field>
+
+    <mat-slide-toggle formControlName="openPrice">Open price: entered when ordering</mat-slide-toggle>
+
+    <mat-form-field>
+      <mat-label>Price</mat-label>
+      <span matTextPrefix>$&nbsp;</span>
+      <input matInput formControlName="price" inputmode="decimal" autocomplete="off" />
+      @if (form.controls.openPrice.value) {
+        <mat-hint>Not needed for an open-price item</mat-hint>
+      }
+      @if (form.controls.price.hasError('required')) {
+        <mat-error>Enter a price</mat-error>
+      } @else if (form.controls.price.hasError('format')) {
+        <mat-error>Use a number like 12.50</mat-error>
+      } @else if (form.controls.price.hasError('min')) {
+        <mat-error>The price must be more than zero</mat-error>
+      } @else if (form.controls.price.hasError('max')) {
+        <mat-error>The price cannot be more than {{ maxPrice }}</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-slide-toggle formControlName="available">Available for ordering</mat-slide-toggle>
+
+    @if (error(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+    }
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Cancel</button>
+    <button mat-flat-button type="submit" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
+  </mat-dialog-actions>
+</form>

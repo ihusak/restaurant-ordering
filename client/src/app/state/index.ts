@@ -5,6 +5,7 @@ import { provideState, provideStore } from '@ngrx/store';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
 import * as menuEffects from './menu/menu.effects';
 import { menuFeature } from './menu/menu.reducer';
+import * as setupEffects from './menu/setup.effects';
 import * as ordersEffects from './orders/orders.effects';
 import { ordersFeature } from './orders/orders.reducer';
 import { connectionFeature } from './realtime/connection.reducer';
@@ -16,7 +17,7 @@ export function provideAppState(): EnvironmentProviders[] {
     provideState(menuFeature),
     provideState(ordersFeature),
     provideState(connectionFeature),
-    provideEffects(menuEffects, ordersEffects, realtimeEffects),
+    provideEffects(menuEffects, setupEffects, ordersEffects, realtimeEffects),
     provideStoreDevtools({ maxAge: 25, logOnly: !isDevMode() }),
   ];
 }

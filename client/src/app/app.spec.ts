@@ -2,7 +2,9 @@ import { TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
 import { TitleStrategy, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { provideMockActions } from '@ngrx/effects/testing';
 import { provideMockStore } from '@ngrx/store/testing';
+import { EMPTY } from 'rxjs';
 import { App } from './app';
 import { routes } from './app.routes';
 import { PageTitleStrategy } from './core/page-title.strategy';
@@ -16,6 +18,7 @@ describe('App shell', () => {
       providers: [
         provideRouter(routes),
         { provide: TitleStrategy, useClass: PageTitleStrategy },
+        provideMockActions(() => EMPTY),
         provideMockStore({ initialState: { menu: initialMenuState, orders: initialOrdersState, connection: initialConnectionState } }),
       ],
     });

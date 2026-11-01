@@ -1,10 +1,11 @@
 import { createEntityAdapter } from '@ngrx/entity';
-import type { EntityState } from '@ngrx/entity';
+import type { EntityAdapter, EntityState } from '@ngrx/entity';
 import { createFeature, createReducer, createSelector, on } from '@ngrx/store';
 import type { Category, MenuItem, ServerEvent } from '@shared';
 import type { LoadStatus } from '../load-status';
 import { RealtimeActions } from '../realtime/realtime.actions';
 import { MenuActions } from './menu.actions';
+import { SetupApiActions } from './setup.actions';
 
 export interface MenuState {
   categories: EntityState<Category>;
@@ -31,14 +32,23 @@ export const initialMenuState: MenuState = {
   error: null,
 };
 
+/**
+ * Keeps whichever copy is newer: the same change can arrive twice, once in the
+ * REST response and once from the event stream, in either order.
+ */
+function setNewer<T extends { id: string; rev: number }>(adapter: EntityAdapter<T>, entity: T, state: EntityState<T>): EntityState<T> {
+  const existing = state.entities[entity.id];
+  return existing && existing.rev >= entity.rev ? state : adapter.setOne(entity, state);
+}
+
 function applyMenuEvent(state: MenuState, event: ServerEvent): MenuState {
   switch (event.type) {
     case 'category.upserted':
-      return { ...state, categories: categoryAdapter.upsertOne(event.category, state.categories) };
+      return { ...state, categories: setNewer(categoryAdapter, event.category, state.categories) };
     case 'category.deleted':
       return { ...state, categories: categoryAdapter.removeOne(event.id, state.categories) };
     case 'item.upserted':
-      return { ...state, items: itemAdapter.upsertOne(event.item, state.items) };
+      return { ...state, items: setNewer(itemAdapter, event.item, state.items) };
     case 'item.deleted':
       return { ...state, items: itemAdapter.removeOne(event.id, state.items) };
     default:
@@ -72,9 +82,22 @@ export const menuFeature = createFeature({
       const next = applyMenuEvent(state, event);
       return next === state ? state : { ...next, version: event.version };
     }),
+    // Confirmed by the server: shown right away, even if the event stream is down.
+    // The version stays as it is, so events that are still on their way are not skipped.
+    on(SetupApiActions.categorySaved, (state, { category }): MenuState => ({
+      ...state,
+      categories: setNewer(categoryAdapter, category, state.categories),
+    })),
+    on(SetupApiActions.categoryDeleted, (state, { id }): MenuState => ({
+      ...state,
+      categories: categoryAdapter.removeOne(id, state.categories),
+    })),
+    on(SetupApiActions.itemSaved, (state, { item }): MenuState => ({ ...state, items: setNewer(itemAdapter, item, state.items) })),
+    on(SetupApiActions.itemDeleted, (state, { id }): MenuState => ({ ...state, items: itemAdapter.removeOne(id, state.items) })),
   ),
   extraSelectors: ({ selectCategories, selectItems }) => {
     const selectAllCategories = createSelector(selectCategories, categorySelectors.selectAll);
+    const selectCategoryEntities = createSelector(selectCategories, categorySelectors.selectEntities);
     const selectAllItems = createSelector(selectItems, itemSelectors.selectAll);
     const selectItemEntities = createSelector(selectItems, itemSelectors.selectEntities);
 
@@ -95,6 +118,13 @@ export const menuFeature = createFeature({
       available: items.filter((item) => item.available).length,
     }));
 
-    return { selectAllCategories, selectAllItems, selectItemEntities, selectItemsByCategory, selectStats };
+    return {
+      selectAllCategories,
+      selectCategoryEntities,
+      selectAllItems,
+      selectItemEntities,
+      selectItemsByCategory,
+      selectStats,
+    };
   },
 });

@@ -1,0 +1,83 @@
+<header class="page-header">
+  <h1>Setup</h1>
+  <p>Changes are saved on the server and appear in Menu right away, in every open tab.</p>
+</header>
+
+@if (categories().length === 0 && status() !== 'loaded') {
+  @if (status() === 'error') {
+    <p role="alert">{{ loadError() }}</p>
+    <button mat-stroked-button type="button" (click)="reload()">Try again</button>
+  } @else {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading the menu" />
+  }
+} @else {
+  <div class="layout">
+    <section class="panel categories" aria-labelledby="categories-title">
+      <div class="panel-header">
+        <h2 id="categories-title">Categories</h2>
+        <button mat-icon-button type="button" (click)="addCategory()" matTooltip="New category" aria-label="New category">
+          <mat-icon>add</mat-icon>
+        </button>
+      </div>
+      <mat-nav-list>
+        @for (category of categories(); track category.id) {
+          <a
+            mat-list-item
+            [routerLink]="[]"
+            [queryParams]="{ category: category.id }"
+            [activated]="category.id === selected()?.id"
+            [attr.aria-current]="category.id === selected()?.id ? 'true' : null"
+          >
+            <span matListItemTitle>{{ category.name }}</span>
+            <span matListItemMeta>{{ countIn(category) }}</span>
+          </a>
+        } @empty {
+          <p class="empty">No categories yet.</p>
+        }
+      </mat-nav-list>
+    </section>
+
+    <section class="panel items" aria-labelledby="items-title">
+      @if (selected(); as category) {
+        <div class="panel-header">
+          <h2 id="items-title">{{ category.name }}</h2>
+          <button mat-icon-button type="button" (click)="renameCategory(category)" matTooltip="Rename category" aria-label="Rename category">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button type="button" (click)="deleteCategory(category)" matTooltip="Delete category" aria-label="Delete category">
+            <mat-icon>delete</mat-icon>
+          </button>
+          <button mat-flat-button type="button" (click)="addItem(category)">
+            <mat-icon>add</mat-icon>
+            New item
+          </button>
+        </div>
+
+        <ul class="item-list">
+          @for (item of items(); track item.id) {
+            <li class="item" [class.unavailable]="!item.available">
+              <div class="item-main">
+                <span class="item-name">{{ item.name }}</span>
+                @if (item.description) {
+                  <span class="item-description">{{ item.description }}</span>
+                }
+              </div>
+              <span class="item-price">{{ price(item) }}</span>
+              <span class="badge" [class.off]="!item.available">{{ item.available ? 'Available' : 'Unavailable' }}</span>
+              <button mat-icon-button type="button" (click)="editItem(item)" [attr.aria-label]="'Edit ' + item.name">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button type="button" (click)="deleteItem(item)" [attr.aria-label]="'Delete ' + item.name">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </li>
+          } @empty {
+            <li class="empty">No items in this category yet.</li>
+          }
+        </ul>
+      } @else {
+        <p class="empty" id="items-title">Create a category to start adding items.</p>
+      }
+    </section>
+  </div>
+}

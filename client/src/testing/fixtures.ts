@@ -40,3 +40,10 @@ export function menuSnapshot(overrides: Partial<MenuSnapshot> = {}): MenuSnapsho
 export function ordersSnapshot(overrides: Partial<OrdersSnapshot> = {}): OrdersSnapshot {
   return { epoch: 'epoch-1', version: 0, orders: [], ...overrides };
 }
+
+export function requestIdOf(action: unknown): string {
+  if (typeof action === 'object' && action !== null && 'requestId' in action && typeof action.requestId === 'string') {
+    return action.requestId;
+  }
+  throw new Error('The action has no requestId');
+}
