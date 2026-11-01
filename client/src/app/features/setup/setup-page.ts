@@ -6,12 +6,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Store } from '@ngrx/store';
 import type { Category, MenuItem } from '@shared';
 import { confirm } from '../../core/confirm-dialog';
 import { formatCents } from '../../core/money';
+import { Notifier } from '../../core/notifier.service';
 import { MenuActions } from '../../state/menu/menu.actions';
 import { menuFeature } from '../../state/menu/menu.reducer';
 import { SetupActions } from '../../state/menu/setup.actions';
@@ -41,7 +41,7 @@ const byName = (a: MenuItem, b: MenuItem): number => a.name.localeCompare(b.name
 export class SetupPage {
   private readonly store = inject(Store);
   private readonly dialog = inject(MatDialog);
-  private readonly snackBar = inject(MatSnackBar);
+  private readonly notifier = inject(Notifier);
   private readonly editor = inject(MenuEditor);
 
   /** `?category=` in the URL, so a selected category survives a reload and can be linked to. */
@@ -139,6 +139,6 @@ export class SetupPage {
   }
 
   private report(error: string | null): void {
-    if (error) this.snackBar.open(error, 'OK', { duration: 6_000 });
+    if (error) this.notifier.show(error).subscribe();
   }
 }
