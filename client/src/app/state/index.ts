@@ -3,6 +3,9 @@ import type { EnvironmentProviders } from '@angular/core';
 import { provideEffects } from '@ngrx/effects';
 import { provideState, provideStore } from '@ngrx/store';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
+import * as cartEffects from './cart/cart.effects';
+import { cartFeature } from './cart/cart.reducer';
+import { loadCart } from './cart/cart.storage';
 import * as menuEffects from './menu/menu.effects';
 import { menuFeature } from './menu/menu.reducer';
 import * as setupEffects from './menu/setup.effects';
@@ -17,7 +20,8 @@ export function provideAppState(): EnvironmentProviders[] {
     provideState(menuFeature),
     provideState(ordersFeature),
     provideState(connectionFeature),
-    provideEffects(menuEffects, setupEffects, ordersEffects, realtimeEffects),
+    provideState(cartFeature.name, cartFeature.reducer, { initialState: loadCart }),
+    provideEffects(menuEffects, setupEffects, ordersEffects, realtimeEffects, cartEffects),
     provideStoreDevtools({ maxAge: 25, logOnly: !isDevMode() }),
   ];
 }

@@ -1,9 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import type { ComponentFixture } from '@angular/core/testing';
 import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
+import { MatDialog } from '@angular/material/dialog';
 import { provideRouter } from '@angular/router';
 import { Store, provideState, provideStore } from '@ngrx/store';
 import { category, menuItem, menuSnapshot } from '../../../testing/fixtures';
+import { of } from 'rxjs';
+import { cartFeature } from '../../state/cart/cart.reducer';
 import { MenuActions } from '../../state/menu/menu.actions';
 import { menuFeature } from '../../state/menu/menu.reducer';
 import { RealtimeActions } from '../../state/realtime/realtime.actions';
@@ -12,6 +15,7 @@ import { MenuPage } from './menu-page';
 describe('MenuPage', () => {
   let fixture: ComponentFixture<MenuPage>;
   let store: Store;
+  const openDialog = vi.fn();
 
   beforeEach(async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -19,7 +23,13 @@ describe('MenuPage', () => {
     vi.spyOn(CdkVirtualScrollViewport.prototype, 'getViewportSize').mockReturnValue(1_000);
     TestBed.configureTestingModule({
       imports: [MenuPage],
-      providers: [provideRouter([]), provideStore(), provideState(menuFeature)],
+      providers: [
+        provideRouter([]),
+        provideStore(),
+        provideState(menuFeature),
+        provideState(cartFeature),
+        { provide: MatDialog, useValue: { open: openDialog } },
+      ],
     });
     store = TestBed.inject(Store) as Store;
     fixture = TestBed.createComponent(MenuPage);
@@ -120,5 +130,46 @@ describe('MenuPage', () => {
     expect(rendered).toBeGreaterThan(10);
     expect(rendered).toBeLessThan(60);
     expect(texts('.summary')).toEqual(['3000 items']);
+  });
+
+  describe('adding to the cart', () => {
+    const addButton = (name: string): HTMLButtonElement => {
+      const row = [...element().querySelectorAll('.row')].find((node) => node.querySelector('.item-name')?.textContent.includes(name));
+      const button = row?.querySelector<HTMLButtonElement>('button.add');
+      if (!button) throw new Error(`No add button for ${name}`);
+      return button;
+    };
+    const cartBar = (): string | undefined => element().querySelector('.cart-bar')?.textContent.trim().replace(/\s+/g, ' ');
+
+    it('adds an item at the price shown and counts it on the button', async () => {
+      await load();
+      addButton('Margherita').click();
+      addButton('Margherita').click();
+      await fixture.whenStable();
+      expect(addButton('Margherita').textContent).toContain('2');
+      expect(cartBar()).toContain('View cart · 2 items · $25.00');
+    });
+
+    it('asks for the price of an open-price item', async () => {
+      openDialog.mockReturnValue({ afterClosed: () => of(850) });
+      await load();
+      addButton('Special').click();
+      await fixture.whenStable();
+      expect(openDialog).toHaveBeenCalled();
+      expect(cartBar()).toContain('1 item · $8.50');
+    });
+
+    it('adds nothing when the price dialog is cancelled', async () => {
+      openDialog.mockReturnValue({ afterClosed: () => of(undefined) });
+      await load();
+      addButton('Special').click();
+      await fixture.whenStable();
+      expect(cartBar()).toBeUndefined();
+    });
+
+    it('does not let an unavailable item be added', async () => {
+      await load();
+      expect(addButton('Cola').disabled).toBe(true);
+    });
   });
 });

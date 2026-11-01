@@ -3,15 +3,21 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, si
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { RouterLink } from '@angular/router';
+import { MatBottomSheet } from '@angular/material/bottom-sheet';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { Store } from '@ngrx/store';
-import { debounce, distinctUntilChanged, of, timer } from 'rxjs';
-import type { MenuItem } from '@shared';
+import { debounce, distinctUntilChanged, firstValueFrom, of, timer } from 'rxjs';
+import type { Cents, MenuItem } from '@shared';
 import { formatCents } from '../../core/money';
+import { CartActions } from '../../state/cart/cart.actions';
+import { cartFeature } from '../../state/cart/cart.reducer';
 import { MenuActions } from '../../state/menu/menu.actions';
+import { CartPanel } from '../cart/cart-panel';
+import { OpenPriceDialog } from '../cart/open-price-dialog';
 import { menuFeature } from '../../state/menu/menu.reducer';
 import { buildMenuRows } from './menu-rows';
 import type { MenuRow } from './menu-rows';
@@ -22,7 +28,7 @@ const SEARCH_DEBOUNCE_MS = 200;
 
 @Component({
   selector: 'app-menu-page',
-  imports: [ScrollingModule, RouterLink, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule],
+  imports: [ScrollingModule, RouterLink, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, CartPanel],
   templateUrl: './menu-page.html',
   styleUrl: './menu-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -30,6 +36,8 @@ const SEARCH_DEBOUNCE_MS = 200;
 export class MenuPage {
   private readonly store = inject(Store);
   private readonly window = inject(DOCUMENT).defaultView;
+  private readonly dialog = inject(MatDialog);
+  private readonly bottomSheet = inject(MatBottomSheet);
   protected readonly rowHeight = ROW_HEIGHT;
   protected readonly skeletonRows = Array.from({ length: 12 }, (_, index) => index);
 
@@ -40,6 +48,10 @@ export class MenuPage {
   protected readonly error = this.store.selectSignal(menuFeature.selectError);
   protected readonly categories = this.store.selectSignal(menuFeature.selectAllCategories);
   private readonly itemsByCategory = this.store.selectSignal(menuFeature.selectItemsByCategory);
+
+  private readonly quantityByItem = this.store.selectSignal(cartFeature.selectQuantityByItem);
+  protected readonly cartCount = this.store.selectSignal(cartFeature.selectItemCount);
+  protected readonly cartTotal = this.store.selectSignal(cartFeature.selectTotals);
 
   protected readonly searchText = signal('');
   /** Waits for a pause in typing; clearing the field applies at once. */
@@ -79,6 +91,29 @@ export class MenuPage {
 
   protected price(item: MenuItem): string {
     return item.price === null ? 'Set when ordering' : formatCents(item.price);
+  }
+
+  protected inCart(item: MenuItem): number {
+    return this.quantityByItem().get(item.id) ?? 0;
+  }
+
+  protected money(cents: Cents): string {
+    return formatCents(cents);
+  }
+
+  protected async add(item: MenuItem): Promise<void> {
+    if (!item.available) return;
+    let unitPrice = item.price;
+    if (item.openPrice || unitPrice === null) {
+      const ref = this.dialog.open<OpenPriceDialog, MenuItem, Cents>(OpenPriceDialog, { data: item, width: '400px' });
+      unitPrice = (await firstValueFrom(ref.afterClosed())) ?? null;
+      if (unitPrice === null) return;
+    }
+    this.store.dispatch(CartActions.itemAdded({ item, unitPrice }));
+  }
+
+  protected openCart(): void {
+    this.bottomSheet.open(CartPanel);
   }
 
   protected search(event: Event): void {

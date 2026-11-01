@@ -1,5 +1,7 @@
 <h1 class="cdk-visually-hidden">Menu</h1>
 
+<div class="layout">
+<div class="catalog">
 <div class="controls">
   <mat-form-field class="search" subscriptSizing="dynamic">
     <mat-icon matPrefix aria-hidden="true">search</mat-icon>
@@ -82,9 +84,37 @@
               <span class="item-description">{{ row.item.description }}</span>
             </div>
             <span class="item-price" [class.open]="row.item.openPrice">{{ price(row.item) }}</span>
+            @let quantity = inCart(row.item);
+            <button
+              mat-stroked-button
+              type="button"
+              class="add"
+              [class.in-cart]="quantity > 0"
+              [disabled]="!row.item.available"
+              (click)="add(row.item)"
+              [attr.aria-label]="'Add ' + row.item.name + (quantity > 0 ? ', ' + quantity + ' in cart' : '')"
+            >
+              <mat-icon>add</mat-icon>
+              {{ quantity > 0 ? quantity : 'Add' }}
+            </button>
           }
         }
       </div>
     </cdk-virtual-scroll-viewport>
   }
+}
+</div>
+
+<aside class="cart" aria-label="Cart">
+  <app-cart-panel />
+</aside>
+</div>
+
+@if (cartCount() > 0) {
+  <div class="cart-bar">
+    <button mat-flat-button type="button" class="cart-bar-button" (click)="openCart()">
+      <mat-icon>shopping_cart</mat-icon>
+      View cart · {{ cartCount() }} {{ cartCount() === 1 ? 'item' : 'items' }} · {{ money(cartTotal().total) }}
+    </button>
+  </div>
 }

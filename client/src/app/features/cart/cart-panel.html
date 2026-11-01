@@ -1,0 +1,79 @@
+<div class="header">
+  <h2 id="cart-title">Cart</h2>
+  @if (lines().length > 0) {
+    <button mat-button type="button" (click)="clear()">Clear</button>
+  }
+</div>
+
+@if (lines().length === 0) {
+  <p class="empty">Your cart is empty. Add items from the menu.</p>
+} @else {
+  <ul class="lines" aria-labelledby="cart-title">
+    @for (line of lines(); track line.lineId) {
+      <li class="line">
+        <div class="line-info">
+          <span class="line-name">{{ line.name }}</span>
+          <span class="line-unit">
+            {{ money(line.unitPrice) }}{{ line.openPrice ? ' · custom price' : '' }}
+          </span>
+        </div>
+        <div class="stepper" role="group" [attr.aria-label]="'Quantity of ' + line.name">
+          <button
+            mat-icon-button
+            type="button"
+            (click)="setQuantity(line, line.quantity - 1)"
+            [attr.aria-label]="line.quantity === 1 ? 'Remove ' + line.name : 'One less ' + line.name"
+          >
+            <mat-icon>{{ line.quantity === 1 ? 'delete' : 'remove' }}</mat-icon>
+          </button>
+          <span class="quantity" aria-live="polite">{{ line.quantity }}</span>
+          <button
+            mat-icon-button
+            type="button"
+            (click)="setQuantity(line, line.quantity + 1)"
+            [disabled]="line.quantity >= maxQuantity"
+            [attr.aria-label]="'One more ' + line.name"
+          >
+            <mat-icon>add</mat-icon>
+          </button>
+        </div>
+        <span class="line-total">{{ money(line.unitPrice * line.quantity) }}</span>
+      </li>
+    }
+  </ul>
+
+  <mat-form-field class="discount" subscriptSizing="dynamic">
+    <mat-label>Discount</mat-label>
+    <span matTextPrefix>$&nbsp;</span>
+    <input
+      matInput
+      inputmode="decimal"
+      autocomplete="off"
+      [value]="discount() ? discountInput(discount()) : ''"
+      (change)="setDiscount($event)"
+      [attr.aria-invalid]="discountFormatError() || discountTooHigh()"
+    />
+    @if (discountFormatError()) {
+      <mat-hint class="warn">Use a number like 5.00</mat-hint>
+    } @else if (discountTooHigh()) {
+      <mat-hint class="warn">The discount cannot be more than the subtotal</mat-hint>
+    }
+  </mat-form-field>
+
+  <dl class="totals">
+    <div>
+      <dt>Subtotal · {{ itemCount() }} {{ itemCount() === 1 ? 'item' : 'items' }}</dt>
+      <dd>{{ money(totals().subtotal) }}</dd>
+    </div>
+    @if (totals().discount > 0) {
+      <div>
+        <dt>Discount</dt>
+        <dd>−{{ money(totals().discount) }}</dd>
+      </div>
+    }
+    <div class="total">
+      <dt>Total</dt>
+      <dd>{{ money(totals().total) }}</dd>
+    </div>
+  </dl>
+}
