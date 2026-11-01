@@ -106,12 +106,15 @@ export async function buildApp(options: AppOptions = {}): Promise<App> {
   server.addHook('onReady', () => {
     churn.start();
   });
+  // preClose runs before Fastify waits for open connections to finish: an SSE
+  // stream never finishes by itself, so closing it later would hang the shutdown.
+  server.addHook('preClose', () => {
+    for (const close of streams) close();
+    streams.clear();
+  });
   server.addHook('onClose', () => {
     churn.stop();
     kitchen.stop();
-    // Open SSE streams would otherwise keep the server from shutting down.
-    for (const close of streams) close();
-    streams.clear();
   });
 
   return { server, log, menu, orders };
