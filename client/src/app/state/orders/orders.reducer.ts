@@ -3,6 +3,7 @@ import type { EntityState } from '@ngrx/entity';
 import { createFeature, createReducer, createSelector, on } from '@ngrx/store';
 import type { Order } from '@shared';
 import type { LoadStatus } from '../load-status';
+import { CheckoutActions } from '../checkout/checkout.actions';
 import { RealtimeActions } from '../realtime/realtime.actions';
 import { OrdersActions } from './orders.actions';
 
@@ -25,6 +26,12 @@ export const initialOrdersState: OrdersState = orderAdapter.getInitialState({
 
 const { selectAll } = orderAdapter.getSelectors();
 
+/** The same order can come from the checkout response and from the stream, in either order. */
+function setNewer(state: OrdersState, order: Order): OrdersState {
+  const existing = state.entities[order.id];
+  return existing && existing.rev >= order.rev ? state : orderAdapter.setOne(order, state);
+}
+
 export const ordersFeature = createFeature({
   name: 'orders',
   reducer: createReducer(
@@ -42,9 +49,11 @@ export const ordersFeature = createFeature({
         }),
     ),
     on(OrdersActions.loadFailed, (state, { error }): OrdersState => ({ ...state, status: 'error', error })),
+    // Shown in Orders at once, even if the stream is down; the stream version is left alone.
+    on(CheckoutActions.succeeded, (state, { order }): OrdersState => setNewer(state, order)),
     on(RealtimeActions.eventReceived, (state, { event }): OrdersState => {
       if (event.type !== 'order.upserted' || state.epoch === null || event.version <= state.version) return state;
-      return orderAdapter.upsertOne(event.order, { ...state, version: event.version });
+      return setNewer({ ...state, version: event.version }, event.order);
     }),
   ),
   extraSelectors: ({ selectOrdersState }) => {

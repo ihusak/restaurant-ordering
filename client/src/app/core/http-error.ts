@@ -5,6 +5,11 @@ export function isApiErrorBody(value: unknown): value is ApiErrorBody {
   return typeof value === 'object' && value !== null && typeof (value as Partial<ApiErrorBody>).code === 'string';
 }
 
+/** No answer, or the server failed: the request may or may not have been processed. */
+export function isTransient(error: unknown): boolean {
+  return error instanceof HttpErrorResponse && (error.status === 0 || error.status >= 500);
+}
+
 /** A message that can be shown to the user as it is. */
 export function errorMessage(error: unknown): string {
   if (error instanceof HttpErrorResponse) {

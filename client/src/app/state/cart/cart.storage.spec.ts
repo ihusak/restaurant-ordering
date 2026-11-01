@@ -6,6 +6,8 @@ describe('cart storage', () => {
   const cart: CartState = {
     lines: [{ lineId: 'pizza', itemId: 'pizza', name: 'Pizza', openPrice: false, unitPrice: 1250, quantity: 2 }],
     discount: 100,
+    idempotencyKey: 'key-1',
+    outcomeUnknown: true,
   };
 
   function memoryStorage(initial: string | null = null): Pick<Storage, 'getItem' | 'setItem'> {
@@ -18,7 +20,12 @@ describe('cart storage', () => {
     };
   }
 
-  it('restores a saved cart', () => {
+  it('reads a cart saved before checkout existed', () => {
+    const old = JSON.stringify({ lines: cart.lines, discount: 100 });
+    expect(loadCart(memoryStorage(old))).toEqual({ ...cart, idempotencyKey: null, outcomeUnknown: false });
+  });
+
+  it('restores a saved cart with its idempotency key', () => {
     const storage = memoryStorage();
     saveCart(cart, storage);
     expect(loadCart(storage)).toEqual(cart);

@@ -6,6 +6,8 @@ import { provideStoreDevtools } from '@ngrx/store-devtools';
 import * as cartEffects from './cart/cart.effects';
 import { cartFeature } from './cart/cart.reducer';
 import { loadCart } from './cart/cart.storage';
+import * as checkoutEffects from './checkout/checkout.effects';
+import { checkoutFeature } from './checkout/checkout.reducer';
 import * as menuEffects from './menu/menu.effects';
 import { menuFeature } from './menu/menu.reducer';
 import * as setupEffects from './menu/setup.effects';
@@ -21,7 +23,8 @@ export function provideAppState(): EnvironmentProviders[] {
     provideState(ordersFeature),
     provideState(connectionFeature),
     provideState(cartFeature.name, cartFeature.reducer, { initialState: loadCart }),
-    provideEffects(menuEffects, setupEffects, ordersEffects, realtimeEffects, cartEffects),
+    provideState(checkoutFeature),
+    provideEffects(menuEffects, setupEffects, ordersEffects, realtimeEffects, cartEffects, checkoutEffects),
     provideStoreDevtools({ maxAge: 25, logOnly: !isDevMode() }),
   ];
 }

@@ -9,6 +9,7 @@ import { App } from './app';
 import { routes } from './app.routes';
 import { PageTitleStrategy } from './core/page-title.strategy';
 import { initialCartState } from './state/cart/cart.reducer';
+import { initialCheckoutState } from './state/checkout/checkout.reducer';
 import { initialMenuState } from './state/menu/menu.reducer';
 import { initialOrdersState } from './state/orders/orders.reducer';
 import { initialConnectionState } from './state/realtime/connection.reducer';
@@ -26,6 +27,7 @@ describe('App shell', () => {
             orders: initialOrdersState,
             connection: initialConnectionState,
             cart: initialCartState,
+            checkout: initialCheckoutState,
           },
         }),
       ],

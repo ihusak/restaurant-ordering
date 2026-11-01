@@ -7,6 +7,8 @@ import { Store, provideState, provideStore } from '@ngrx/store';
 import { category, menuItem, menuSnapshot } from '../../../testing/fixtures';
 import { of } from 'rxjs';
 import { cartFeature } from '../../state/cart/cart.reducer';
+import { checkoutFeature } from '../../state/checkout/checkout.reducer';
+import { connectionFeature } from '../../state/realtime/connection.reducer';
 import { MenuActions } from '../../state/menu/menu.actions';
 import { menuFeature } from '../../state/menu/menu.reducer';
 import { RealtimeActions } from '../../state/realtime/realtime.actions';
@@ -28,6 +30,8 @@ describe('MenuPage', () => {
         provideStore(),
         provideState(menuFeature),
         provideState(cartFeature),
+        provideState(checkoutFeature),
+        provideState(connectionFeature),
         { provide: MatDialog, useValue: { open: openDialog } },
       ],
     });

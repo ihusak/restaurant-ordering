@@ -1,10 +1,16 @@
 import { TestBed } from '@angular/core/testing';
 import type { ComponentFixture } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { Store, provideState, provideStore } from '@ngrx/store';
-import { menuItem } from '../../../testing/fixtures';
+import { provideRouter } from '@angular/router';
+import { ActionsSubject, Store, provideState, provideStore } from '@ngrx/store';
+import type { Action } from '@ngrx/store';
+import { menuItem, order } from '../../../testing/fixtures';
 import { CartActions } from '../../state/cart/cart.actions';
 import { cartFeature } from '../../state/cart/cart.reducer';
+import { CheckoutActions } from '../../state/checkout/checkout.actions';
+import { checkoutFeature } from '../../state/checkout/checkout.reducer';
+import { connectionFeature } from '../../state/realtime/connection.reducer';
+import { RealtimeActions } from '../../state/realtime/realtime.actions';
 import { CartPanel } from './cart-panel';
 import { OpenPriceDialog } from './open-price-dialog';
 
@@ -58,10 +64,22 @@ describe('OpenPriceDialog', () => {
 describe('CartPanel', () => {
   let fixture: ComponentFixture<CartPanel>;
   let store: Store;
+  let dispatched: Action[];
 
   beforeEach(async () => {
-    TestBed.configureTestingModule({ imports: [CartPanel], providers: [provideStore(), provideState(cartFeature)] });
+    TestBed.configureTestingModule({
+      imports: [CartPanel],
+      providers: [
+        provideRouter([]),
+        provideStore(),
+        provideState(cartFeature),
+        provideState(checkoutFeature),
+        provideState(connectionFeature),
+      ],
+    });
     store = TestBed.inject(Store) as Store;
+    dispatched = [];
+    TestBed.inject(ActionsSubject).subscribe((action) => dispatched.push(action));
     store.dispatch(CartActions.itemAdded({ item: menuItem({ id: 'pizza', name: 'Pizza', price: 1250 }), unitPrice: 1250 }));
     fixture = TestBed.createComponent(CartPanel);
     await fixture.whenStable();
@@ -97,5 +115,37 @@ describe('CartPanel', () => {
   it('removes the line when the quantity goes below one', async () => {
     await click('Remove Pizza');
     expect(textOf(fixture)).toContain('Your cart is empty');
+  });
+
+  const placeButton = (): HTMLButtonElement | null => element().querySelector('button.place-order');
+
+  it('places the order with a fresh idempotency key', async () => {
+    placeButton()?.click();
+    await fixture.whenStable();
+    expect(dispatched).toContainEqual(CheckoutActions.submitted({ newKey: expect.any(String) as string }));
+    expect(placeButton()?.textContent).toContain('Placing order');
+    expect(placeButton()?.disabled).toBe(true);
+  });
+
+  it('cannot place an order while offline', async () => {
+    store.dispatch(RealtimeActions.browserStatusChanged({ online: false }));
+    await fixture.whenStable();
+    expect(placeButton()?.disabled).toBe(true);
+    expect(textOf(fixture)).toContain('You are offline');
+  });
+
+  it('confirms the placed order and empties the cart', async () => {
+    store.dispatch(CheckoutActions.succeeded({ order: order({ number: 1042, total: 1250 }) }));
+    await fixture.whenStable();
+    expect(textOf(fixture)).toContain('Order #1042 placed');
+    expect(placeButton()).toBeNull();
+  });
+
+  it('explains which items changed when the server refuses the order', async () => {
+    store.dispatch(
+      CheckoutActions.menuChanged({ issues: [{ itemId: 'pizza', kind: 'price_changed', expected: 1250, actual: 1400 }] }),
+    );
+    await fixture.whenStable();
+    expect(textOf(fixture)).toContain('Pizza now costs $14.00 instead of $12.50.');
   });
 });

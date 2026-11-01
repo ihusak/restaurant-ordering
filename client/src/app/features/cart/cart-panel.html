@@ -1,12 +1,27 @@
 <div class="header">
   <h2 id="cart-title">Cart</h2>
   @if (lines().length > 0) {
-    <button mat-button type="button" (click)="clear()">Clear</button>
+    <button mat-button type="button" (click)="clear()" [disabled]="submitting()">Clear</button>
   }
 </div>
 
+@if (checkout().placed; as order) {
+  <div class="placed" role="status">
+    <mat-icon aria-hidden="true">check_circle</mat-icon>
+    <div>
+      <p class="placed-title">Order #{{ order.number }} placed</p>
+      <p>{{ money(order.total) }} · <a routerLink="/orders">Track it in Orders</a></p>
+    </div>
+    <button mat-icon-button type="button" (click)="dismissConfirmation()" aria-label="Dismiss">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+}
+
 @if (lines().length === 0) {
-  <p class="empty">Your cart is empty. Add items from the menu.</p>
+  @if (!checkout().placed) {
+    <p class="empty">Your cart is empty. Add items from the menu.</p>
+  }
 } @else {
   <ul class="lines" aria-labelledby="cart-title">
     @for (line of lines(); track line.lineId) {
@@ -22,6 +37,7 @@
             mat-icon-button
             type="button"
             (click)="setQuantity(line, line.quantity - 1)"
+            [disabled]="submitting()"
             [attr.aria-label]="line.quantity === 1 ? 'Remove ' + line.name : 'One less ' + line.name"
           >
             <mat-icon>{{ line.quantity === 1 ? 'delete' : 'remove' }}</mat-icon>
@@ -31,7 +47,7 @@
             mat-icon-button
             type="button"
             (click)="setQuantity(line, line.quantity + 1)"
-            [disabled]="line.quantity >= maxQuantity"
+            [disabled]="submitting() || line.quantity >= maxQuantity"
             [attr.aria-label]="'One more ' + line.name"
           >
             <mat-icon>add</mat-icon>
@@ -51,6 +67,7 @@
       autocomplete="off"
       [value]="discount() ? discountInput(discount()) : ''"
       (change)="setDiscount($event)"
+      [disabled]="submitting()"
       [attr.aria-invalid]="discountFormatError() || discountTooHigh()"
     />
     @if (discountFormatError()) {
@@ -76,4 +93,40 @@
       <dd>{{ money(totals().total) }}</dd>
     </div>
   </dl>
+
+  @switch (checkout().status) {
+    @case ('menu-changed') {
+      <div class="problem" role="alert">
+        <p class="problem-title">The menu changed since you added these items:</p>
+        <ul>
+          @for (issue of checkout().issues; track issue.itemId) {
+            <li>{{ describe(issue) }}</li>
+          }
+        </ul>
+        <p>Update your cart and place the order again.</p>
+      </div>
+    }
+    @case ('failed') {
+      <p class="problem" role="alert">{{ checkout().error }}</p>
+    }
+  }
+
+  @if (blocker(); as reason) {
+    <p class="blocker">{{ reason }}</p>
+  }
+
+  <button
+    mat-flat-button
+    type="button"
+    class="place-order"
+    (click)="placeOrder()"
+    [disabled]="submitting() || blocker() !== null"
+  >
+    @if (submitting()) {
+      <mat-spinner diameter="20" aria-hidden="true" />
+      Placing order…
+    } @else {
+      Place order · {{ money(totals().total) }}
+    }
+  </button>
 }

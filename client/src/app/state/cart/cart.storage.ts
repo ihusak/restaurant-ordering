@@ -24,11 +24,16 @@ export function loadCart(storage: Pick<Storage, 'getItem'> = globalThis.localSto
   try {
     const saved: unknown = JSON.parse(storage.getItem(STORAGE_KEY) ?? 'null');
     if (typeof saved !== 'object' || saved === null) return initialCartState;
-    const { lines, discount } = saved as Record<string, unknown>;
+    const { lines, discount, idempotencyKey, outcomeUnknown } = saved as Record<string, unknown>;
     if (!Array.isArray(lines) || !lines.every(isCartLine) || !Number.isInteger(discount) || (discount as number) < 0) {
       return initialCartState;
     }
-    return { lines, discount: discount as number };
+    return {
+      lines,
+      discount: discount as number,
+      idempotencyKey: typeof idempotencyKey === 'string' ? idempotencyKey : null,
+      outcomeUnknown: outcomeUnknown === true,
+    };
   } catch {
     return initialCartState;
   }
