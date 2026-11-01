@@ -13,3 +13,23 @@ mat-slide-toggle {
   margin: 0;
   color: var(--mat-sys-error);
 }
+
+.conflict {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 8px 8px 8px 12px;
+  border-radius: 8px;
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+
+  span {
+    flex: 1;
+  }
+
+  &.deleted {
+    background: var(--mat-sys-error-container);
+    color: var(--mat-sys-on-error-container);
+  }
+}

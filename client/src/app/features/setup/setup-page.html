@@ -44,9 +44,18 @@
           <button mat-icon-button type="button" (click)="renameCategory(category)" matTooltip="Rename category" aria-label="Rename category">
             <mat-icon>edit</mat-icon>
           </button>
-          <button mat-icon-button type="button" (click)="deleteCategory(category)" matTooltip="Delete category" aria-label="Delete category">
-            <mat-icon>delete</mat-icon>
-          </button>
+          @let itemCount = countIn(category);
+          <span [matTooltip]="itemCount > 0 ? 'Move or delete its ' + itemCount + ' items first' : 'Delete category'">
+            <button
+              mat-icon-button
+              type="button"
+              (click)="deleteCategory(category)"
+              [disabled]="itemCount > 0"
+              aria-label="Delete category"
+            >
+              <mat-icon>delete</mat-icon>
+            </button>
+          </span>
           <button mat-flat-button type="button" (click)="addItem(category)">
             <mat-icon>add</mat-icon>
             New item
@@ -63,7 +72,15 @@
                 }
               </div>
               <span class="item-price">{{ price(item) }}</span>
-              <span class="badge" [class.off]="!item.available">{{ item.available ? 'Available' : 'Unavailable' }}</span>
+              <mat-slide-toggle
+                class="availability"
+                [checked]="isAvailable(item)"
+                [disabled]="isPending(item)"
+                (change)="setAvailable(item, $event.checked)"
+                [attr.aria-label]="item.name + ' is available'"
+              >
+                <span class="availability-label">{{ isAvailable(item) ? 'Available' : 'Unavailable' }}</span>
+              </mat-slide-toggle>
               <button mat-icon-button type="button" (click)="editItem(item)" [attr.aria-label]="'Edit ' + item.name">
                 <mat-icon>edit</mat-icon>
               </button>

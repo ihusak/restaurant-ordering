@@ -89,17 +89,10 @@
   font-variant-numeric: tabular-nums;
 }
 
-.badge {
-  padding: 2px 10px;
-  border-radius: 12px;
-  background: var(--mat-sys-primary-container);
-  color: var(--mat-sys-on-primary-container);
-  font: var(--mat-sys-label-medium);
-
-  &.off {
-    background: var(--mat-sys-surface-container-highest);
-    color: var(--mat-sys-on-surface-variant);
-  }
+.availability-label {
+  display: inline-block;
+  min-width: 84px;
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .empty {
@@ -119,10 +112,16 @@
   }
 
   .item {
-    grid-template-columns: 1fr auto auto;
+    gap: 0;
+    padding-left: 12px;
+  }
 
-    .badge {
-      display: none;
-    }
+  .item-price {
+    min-width: 0;
+    padding-right: 8px;
+  }
+
+  .availability-label {
+    display: none;
   }
 }

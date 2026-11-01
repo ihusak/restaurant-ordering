@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Store } from '@ngrx/store';
@@ -24,7 +25,15 @@ const byName = (a: MenuItem, b: MenuItem): number => a.name.localeCompare(b.name
 
 @Component({
   selector: 'app-setup-page',
-  imports: [RouterLink, MatButtonModule, MatIconModule, MatListModule, MatProgressBarModule, MatTooltipModule],
+  imports: [
+    RouterLink,
+    MatButtonModule,
+    MatIconModule,
+    MatListModule,
+    MatProgressBarModule,
+    MatSlideToggleModule,
+    MatTooltipModule,
+  ],
   templateUrl: './setup-page.html',
   styleUrl: './setup-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -51,6 +60,31 @@ export class SetupPage {
     const id = this.selected()?.id;
     return id ? [...(this.itemsByCategory().get(id) ?? [])].sort(byName) : [];
   });
+
+  /** Availability the user asked for, until the server answers. */
+  private readonly pendingAvailability = signal<ReadonlyMap<string, boolean>>(new Map());
+
+  protected isAvailable(item: MenuItem): boolean {
+    return this.pendingAvailability().get(item.id) ?? item.available;
+  }
+
+  protected isPending(item: MenuItem): boolean {
+    return this.pendingAvailability().has(item.id);
+  }
+
+  protected async setAvailable(item: MenuItem, available: boolean): Promise<void> {
+    this.pendingAvailability.update((pending) => new Map(pending).set(item.id, available));
+    const error = await this.editor.run((requestId) =>
+      SetupActions.updateItem({ requestId, id: item.id, patch: { available } }),
+    );
+    // On success the store already holds the new value; on failure the toggle falls back to it.
+    this.pendingAvailability.update((pending) => {
+      const next = new Map(pending);
+      next.delete(item.id);
+      return next;
+    });
+    this.report(error);
+  }
 
   protected countIn(category: Category): number {
     return this.itemsByCategory().get(category.id)?.length ?? 0;
@@ -83,11 +117,11 @@ export class SetupPage {
   }
 
   protected addItem(category: Category): void {
-    this.openItemDialog({ categoryId: category.id, categories: this.categories() });
+    this.openItemDialog({ categoryId: category.id });
   }
 
   protected editItem(item: MenuItem): void {
-    this.openItemDialog({ item, categoryId: item.categoryId, categories: this.categories() });
+    this.openItemDialog({ item, categoryId: item.categoryId });
   }
 
   protected async deleteItem(item: MenuItem): Promise<void> {

@@ -5,19 +5,22 @@ import type { AbstractControl, ValidationErrors } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { Store } from '@ngrx/store';
 import { MAX_FIXED_PRICE } from '@shared';
-import type { Category, MenuItem, MenuItemInput } from '@shared';
+import type { MenuItem, MenuItemInput } from '@shared';
 import { centsToInput, formatCents, parsePrice } from '../../core/money';
+import { menuFeature } from '../../state/menu/menu.reducer';
 import { SetupActions } from '../../state/menu/setup.actions';
+import { trackEditConflict } from './edit-conflict';
 import { MenuEditor } from './menu-editor.service';
 
 export interface ItemDialogData {
   item?: MenuItem;
   categoryId: string;
-  categories: readonly Category[];
 }
 
 function priceValidator(control: AbstractControl<string>): ValidationErrors | null {
@@ -36,6 +39,7 @@ function priceValidator(control: AbstractControl<string>): ValidationErrors | nu
     MatDialogModule,
     MatButtonModule,
     MatFormFieldModule,
+    MatIconModule,
     MatInputModule,
     MatSelectModule,
     MatSlideToggleModule,
@@ -47,8 +51,10 @@ function priceValidator(control: AbstractControl<string>): ValidationErrors | nu
 export class ItemDialog {
   private readonly ref = inject<MatDialogRef<ItemDialog, boolean>>(MatDialogRef);
   private readonly editor = inject(MenuEditor);
+  private readonly store = inject(Store);
   protected readonly data = inject<ItemDialogData>(MAT_DIALOG_DATA);
   protected readonly maxPrice = formatCents(MAX_FIXED_PRICE);
+  protected readonly categories = this.store.selectSignal(menuFeature.selectAllCategories);
 
   private readonly item = this.data.item;
   protected readonly form = inject(NonNullableFormBuilder).group({
@@ -61,6 +67,12 @@ export class ItemDialog {
   });
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
+  private readonly tracker = trackEditConflict(
+    this.item,
+    this.store.selectSignal(menuFeature.selectItemEntities),
+    this.saving,
+  );
+  protected readonly conflict = this.tracker.conflict;
 
   constructor() {
     // An open-price item has no fixed price: it is entered when the item is ordered.
@@ -73,8 +85,22 @@ export class ItemDialog {
     openPrice.valueChanges.pipe(takeUntilDestroyed(inject(DestroyRef))).subscribe(syncPrice);
   }
 
+  protected loadLatest(): void {
+    const latest = this.tracker.latest();
+    if (!latest) return;
+    this.form.setValue({
+      categoryId: latest.categoryId,
+      name: latest.name,
+      description: latest.description,
+      openPrice: latest.openPrice,
+      price: centsToInput(latest.price),
+      available: latest.available,
+    });
+    this.tracker.accept(latest);
+  }
+
   protected async save(): Promise<void> {
-    if (this.form.invalid || this.saving()) {
+    if (this.form.invalid || this.saving() || this.conflict() === 'deleted') {
       this.form.markAllAsTouched();
       return;
     }

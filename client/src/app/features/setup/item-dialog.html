@@ -1,6 +1,21 @@
 <h2 mat-dialog-title>{{ data.item ? 'Edit item' : 'New item' }}</h2>
 <form [formGroup]="form" (ngSubmit)="save()">
   <mat-dialog-content class="fields">
+    @switch (conflict()) {
+      @case ('changed') {
+        <div class="conflict" role="alert">
+          <mat-icon aria-hidden="true">info</mat-icon>
+          <span>Someone else changed this item. Saving will replace their changes.</span>
+          <button mat-button type="button" (click)="loadLatest()">Load latest</button>
+        </div>
+      }
+      @case ('deleted') {
+        <div class="conflict deleted" role="alert">
+          <mat-icon aria-hidden="true">warning</mat-icon>
+          <span>Someone else deleted this item, so it can no longer be saved.</span>
+        </div>
+      }
+    }
     <mat-form-field>
       <mat-label>Name</mat-label>
       <input matInput formControlName="name" maxlength="120" cdkFocusInitial />
@@ -12,7 +27,7 @@
     <mat-form-field>
       <mat-label>Category</mat-label>
       <mat-select formControlName="categoryId">
-        @for (category of data.categories; track category.id) {
+        @for (category of categories(); track category.id) {
           <mat-option [value]="category.id">{{ category.name }}</mat-option>
         }
       </mat-select>
@@ -51,6 +66,6 @@
   </mat-dialog-content>
   <mat-dialog-actions align="end">
     <button mat-button type="button" mat-dialog-close>Cancel</button>
-    <button mat-flat-button type="submit" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
+    <button mat-flat-button type="submit" [disabled]="saving() || conflict() === 'deleted'">{{ saving() ? 'Saving…' : 'Save' }}</button>
   </mat-dialog-actions>
 </form>
