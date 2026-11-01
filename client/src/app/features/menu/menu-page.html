@@ -1,0 +1,90 @@
+<h1 class="cdk-visually-hidden">Menu</h1>
+
+<div class="controls">
+  <mat-form-field class="search" subscriptSizing="dynamic">
+    <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+    <mat-label>Search the menu</mat-label>
+    <input matInput type="search" [value]="searchText()" (input)="search($event)" autocomplete="off" />
+    @if (searchText()) {
+      <button mat-icon-button matSuffix type="button" (click)="clearSearch()" aria-label="Clear search">
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+  </mat-form-field>
+
+  <nav class="chips" aria-label="Categories">
+    <a class="chip" routerLink="." [queryParams]="{ category: null }" queryParamsHandling="merge" [class.selected]="selectedCategoryId() === null" [attr.aria-current]="selectedCategoryId() === null ? 'true' : null">All</a>
+    @for (category of categories(); track category.id) {
+      <a
+        class="chip"
+        routerLink="."
+        [queryParams]="{ category: category.id }"
+        queryParamsHandling="merge"
+        [class.selected]="selectedCategoryId() === category.id"
+        [attr.aria-current]="selectedCategoryId() === category.id ? 'true' : null"
+      >{{ category.name }}</a>
+    }
+  </nav>
+</div>
+
+@if (categories().length === 0 && status() !== 'loaded') {
+  @if (status() === 'error') {
+    <div class="message" role="alert">
+      <p>{{ error() }}</p>
+      <button mat-stroked-button type="button" (click)="reload()">Try again</button>
+    </div>
+  } @else {
+    <ul class="list" aria-busy="true" aria-label="Loading the menu">
+      @for (row of skeletonRows; track row) {
+        <li class="row skeleton" [style.height.px]="rowHeight" aria-hidden="true">
+          <span class="bone name"></span>
+          <span class="bone price"></span>
+        </li>
+      }
+    </ul>
+  }
+} @else {
+  <p class="summary" aria-live="polite">
+    {{ itemCount() }} {{ itemCount() === 1 ? 'item' : 'items' }}{{ isFiltered() ? ' found' : '' }}
+  </p>
+
+  @if (rows().length === 0) {
+    <div class="message">
+      @if (searchText()) {
+        <p>Nothing matches your search.</p>
+        <button mat-stroked-button type="button" (click)="clearSearch()">Clear search</button>
+      } @else {
+        <p>There are no items here yet.</p>
+      }
+    </div>
+  } @else {
+    <cdk-virtual-scroll-viewport scrollWindow [itemSize]="rowHeight" class="list" role="list">
+      <div
+        *cdkVirtualFor="let row of rows(); trackBy: trackRow"
+        class="row"
+        [class.heading]="row.kind === 'category'"
+        [style.height.px]="rowHeight"
+        role="listitem"
+      >
+        @switch (row.kind) {
+          @case ('category') {
+            <h2 class="heading-name">{{ row.name }}</h2>
+            <span class="heading-count">{{ row.count }}</span>
+          }
+          @case ('item') {
+            <div class="item-main" [class.unavailable]="!row.item.available">
+              <span class="item-name">
+                {{ row.item.name }}
+                @if (!row.item.available) {
+                  <span class="tag">Unavailable</span>
+                }
+              </span>
+              <span class="item-description">{{ row.item.description }}</span>
+            </div>
+            <span class="item-price" [class.open]="row.item.openPrice">{{ price(row.item) }}</span>
+          }
+        }
+      </div>
+    </cdk-virtual-scroll-viewport>
+  }
+}

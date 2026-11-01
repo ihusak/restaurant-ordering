@@ -1,4 +1,7 @@
+@use '@angular/cdk';
 @use '@angular/material' as mat;
+
+@include cdk.a11y-visually-hidden();
 
 html {
   color-scheme: light dark;
